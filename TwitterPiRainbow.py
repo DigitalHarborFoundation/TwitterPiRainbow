@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import TwitterCreds
 import re
 import time
@@ -7,10 +8,15 @@ from twython import TwythonStreamer
 # Search terms
 TERMS = '#dhfcolor'
 
-# GPIO pin number of LED
-REDLED = 18
-GREENLED = 16
-BLUELED = 22
+# Board pin number of LED
+REDLED = 12
+GREENLED =16 
+BLUELED =18 
+
+# Use for white balancing
+MAXRED=100
+MAXBLUE=100
+MAXGREEN=100
 
 #Define Color Words
 colors = ["aqua","black","blue","cyan","white","green","magenta","navy","orange","pink","purple","red","teal","yellow"]
@@ -55,13 +61,13 @@ class BlinkyStreamer(TwythonStreamer):
 					print globals()[color]
 					#Set color on rPi here
 					OldRange = (255 - 0)
-		                        NewRange = (100 - 0)
+					NewRange = (100 - 0)
 					oldRed=globals()[color][0]
 					oldGreen=globals()[color][1]
 					oldBlue=globals()[color][2]
-					newRed = ((oldRed * NewRange) / OldRange)
-					newGreen=((oldGreen * NewRange) / OldRange)
-					newBlue=((oldBlue * NewRange) / OldRange)
+					newRed = ((oldRed * MAXRED) / OldRange)
+					newGreen=((oldGreen * MAXGREEN) / OldRange)
+					newBlue=((oldBlue * MAXBLUE) / OldRange)
 					print 'NewRed: ' + str(newRed)
 					print 'NewBlue: ' + str(newBlue)
 					print 'NewGreen: ' + str(newGreen)
@@ -88,15 +94,63 @@ GPIO.setup(REDLED, GPIO.OUT)
 GPIO.setup(GREENLED, GPIO.OUT)
 GPIO.setup(BLUELED, GPIO.OUT)
 
-REDPWM = GPIO.PWM(REDLED, 50)
-GREENPWM = GPIO.PWM(GREENLED,50)
-BLUEPWM = GPIO.PWM(BLUELED,50)
+#Reset all the pins just in case the script crashed before
+GPIO.cleanup()
+
+#Now use the pins for real
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup(REDLED, GPIO.OUT)
+GPIO.setup(GREENLED, GPIO.OUT)
+GPIO.setup(BLUELED, GPIO.OUT)
+
+REDPWM = GPIO.PWM(REDLED, 70)
+GREENPWM = GPIO.PWM(GREENLED,70)
+BLUEPWM = GPIO.PWM(BLUELED,70)
+#BLUEPWM.start(100)
+
+print "Test routine"
+print "Red"
+REDPWM.start(100)
+time.sleep(3.0)
+
+print "Yellow"
+REDPWM.stop()
+GREENPWM.stop()
+BLUEPWM.stop()
+REDPWM.start(100)
+GREENPWM.start(100)
+time.sleep(3.0)
+
+print "Green"
+REDPWM.stop()
+GREENPWM.stop()
+BLUEPWM.stop()
+GREENPWM.start(100)
+time.sleep(3.0)
+
+print "Blue"
+REDPWM.stop()
+GREENPWM.stop()
+BLUEPWM.stop()
 BLUEPWM.start(100)
+time.sleep(3.0)
+
+print "White"
+REDPWM.stop()
+GREENPWM.stop()
+BLUEPWM.stop()
+BLUEPWM.start(90)
+REDPWM.start(100)
+GREENPWM.start(70)
+time.sleep(3.0)
+
+print "Ready..."
 
 
-# Create streamer
-try:
-        stream = BlinkyStreamer(TwitterCreds.APP_KEY(), TwitterCreds.APP_SECRET(), TwitterCreds.OAUTH_TOKEN(), TwitterCreds.OAUTH_TOKEN_SECRET())
-        stream.statuses.filter(track=TERMS)
-except KeyboardInterrupt:
-        GPIO.cleanup()
+while True:
+	# Create streamer
+	try:
+        	stream = BlinkyStreamer(TwitterCreds.APP_KEY(), TwitterCreds.APP_SECRET(), TwitterCreds.OAUTH_TOKEN(), TwitterCreds.OAUTH_TOKEN_SECRET())
+	        stream.statuses.filter(track=TERMS)
+	except: 
+		pass
